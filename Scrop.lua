@@ -1,6 +1,6 @@
 --[[
     ╔══════════════════════════════════════════════════════════════════════╗
-    ║   SCROP  ·  placeholder hub  ·  Silver Surfer edition                ║
+    ║   Scorp  ·  placeholder hub  ·  Silver Surfer edition                ║
     ║   Every toggle / slider / button below is a stub – it just prints.   ║
     ║   Search for "TODO" to find where your real logic goes.              ║
     ╚══════════════════════════════════════════════════════════════════════╝
@@ -12,47 +12,47 @@
 -- Raw URL format:  https://raw.githubusercontent.com/<user>/<repo>/<branch>/<file>
 -- (NOT the github.com page link and NOT the .git clone link – those don't return the script text)
 -- The repo must be PUBLIC or the game can't download it.
-local LIB_URL = "https://raw.githubusercontent.com/uweu2848-prog/sliver-surfer-test/main/ScropLib.lua"
+local LIB_URL = "https://raw.githubusercontent.com/uweu2848-prog/sliver-surfer-test/main/ScorpLib.lua"
 
 local function loadLib()
-    -- Local testing instead:  local src = readfile("ScropLib.lua")
+    -- Local testing instead:  local src = readfile("ScorpLib.lua")
     local ok, src = pcall(function() return game:HttpGet(LIB_URL) end)
-    assert(ok, "[Scrop] couldn't download the library (check URL / branch / repo is public): " .. tostring(src))
+    assert(ok, "[Scorp] couldn't download the library (check URL / branch / repo is public): " .. tostring(src))
 
     local fn, err = loadstring(src)
-    assert(fn, "[Scrop] library downloaded (" .. #src .. " bytes) but failed to compile: " .. tostring(err)
+    assert(fn, "[Scorp] library downloaded (" .. #src .. " bytes) but failed to compile: " .. tostring(err)
         .. "\nFirst 80 chars: " .. src:sub(1, 80))
 
     local lib = fn()
-    assert(lib, "[Scrop] library ran but returned nothing – downloaded " .. #src
-        .. " bytes (full ScropLib.lua is ~72,000). Wrong or incomplete file at that URL.\nLast 80 chars: " .. src:sub(-80))
+    assert(lib, "[Scorp] library ran but returned nothing – downloaded " .. #src
+        .. " bytes (full ScorpLib.lua is ~72,000). Wrong or incomplete file at that URL.\nLast 80 chars: " .. src:sub(-80))
     return lib
 end
 
-local Scrop = loadLib()
+local Scorp = loadLib()
 
 -- Prints what a control did, so you can see the UI is wired up before real features exist.
 local function stub(name)
     return function(value)
-        print(("[Scrop] %s -> %s"):format(name, tostring(value)))
+        print(("[Scorp] %s -> %s"):format(name, tostring(value)))
     end
 end
 
 -- ───────────────────────────────────────────────────────────────────────────
 --  Window
 -- ───────────────────────────────────────────────────────────────────────────
-local Window = Scrop:CreateWindow({
-    Title        = "SCROP",
-    Subtitle     = "cosmic hub  ·  v0.1",
+local Window = Scorp:CreateWindow({
+    Title        = "Scorp",
+    Subtitle     = "A Out Of Space Experince. ~Made By Yuniku.  ·  v0.1",
     Theme        = "Silver Surfer",           -- Silver Surfer | Power Cosmic | Zenn-La | Deep Space
     ToggleKey    = Enum.KeyCode.RightShift,   -- show / hide
     UnloadKey    = Enum.KeyCode.Delete,       -- destroy the UI
-    WidgetText   = "SCROP",                   -- floating open button
-    ConfigFolder = "Scrop",
+    WidgetText   = "Scorp",                   -- floating open button
+    ConfigFolder = "Scorp",
     -- Starfield = false,                     -- turn the twinkling stars off
 })
 
-Window:SetWatermark('<font color="rgb(168,186,214)">SCROP</font>  ·  placeholder build')
+Window:SetWatermark('<font color="rgb(168,186,214)">Scorp</font>  ·  placeholder build')
 
 -- ───────────────────────────────────────────────────────────────────────────
 --  Home
@@ -61,10 +61,10 @@ local Home = Window:CreateTab("Home", { Icon = "🏄" })
 
 do
     local sec = Home:CreateSection("Welcome", true)
-    sec:AddLabel("Scrop is running. Everything here is a placeholder.", { Wrap = true })
+    sec:AddLabel("Scorp is running. Everything here is a placeholder.", { Wrap = true })
     sec:AddLabel("Made by YOUR_NAME", { Color = Window.Theme.TextDim })
     sec:AddButton("Test Notification", function()
-        Window:Notify("Scrop", "Notifications are working.", 3)
+        Window:Notify("Scorp", "Notifications are working.", 3)
     end)
     sec:AddButton("Success Notification", function()
         Window:Notify("Done", "This one uses the success colour.", 3, Window.Theme.Success)
@@ -160,8 +160,8 @@ end
 --  Cleanup (runs when the UI is unloaded – stop your loops / disconnect events here)
 -- ───────────────────────────────────────────────────────────────────────────
 Window:OnUnload(function()
-    print("[Scrop] unloaded")
+    print("[Scorp] unloaded")
     -- TODO: undo anything your features changed
 end)
 
-Window:Notify("Scrop", "Loaded. Press " .. Window.ToggleKey.Name .. " to toggle.", 4)
+Window:Notify("Scorp", "Loaded. Press " .. Window.ToggleKey.Name .. " to toggle.", 4)
