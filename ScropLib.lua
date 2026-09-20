@@ -1,6 +1,6 @@
 --[[
     ╔══════════════════════════════════════════════════════════════════════╗
-    ║                    SCROP UI LIBRARY  v1.0.0                          ║
+    ║                    SCROP UI LIBRARY  v1.1.0                          ║
     ║   Chrome / cosmic UI: windows, tabs, sections, toggles, sliders,     ║
     ║   dropdowns, keybinds, color pickers, notifications, live theming,   ║
     ║   config saving, and a twinkling starfield.                          ║
@@ -42,7 +42,7 @@ local syn_protect  = syn and syn.protect_gui
 local writefile, readfile, isfile = writefile, readfile, isfile
 local isfolder, makefolder, listfiles = isfolder, makefolder, listfiles
 
-local Library = { Version = "1.0.0" }
+local Library = { Version = "1.1.0" }
 shared.ScropUIWindows = shared.ScropUIWindows or {}
 
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -311,7 +311,8 @@ end
         UnloadButton   boolean  – "Unload GUI" quick action in sidebar         (true)
         StartHidden    boolean
         Starfield      boolean  – twinkling stars behind the content            (true)
-        StarCount      number                                                  (60)
+        StarCount      number                                                  (80)
+        Nebula         boolean  – soft glow blobs behind the content            (true)
         ConfigFolder   string   – folder used by Save/LoadConfig
         Sounds         table    – { Click = "rbxassetid://..", Hover = "rbxassetid://.." }
 ]]
@@ -387,28 +388,75 @@ function Library:CreateWindow(opts)
     local mainStroke = Make("UIStroke", { Parent = self.Main, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Thickness = 2, Transparency = 0.15 })
     self:_bind(function(t) self.Main.BackgroundColor3 = t.MainBg; mainStroke.Color = t.Accent end)
 
-    -- ── Starfield ──
+    -- ── Cosmic backdrop: nebula glow, twinkling stars, shooting stars ──
     if opts.Starfield ~= false then
         local field = Make("Frame", { Name = "Starfield", Parent = self.Main, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 })
         local rng = Random.new(1966)
+
+        -- Soft glows faked with stacked translucent discs (no image assets needed)
+        if opts.Nebula ~= false then
+            local function Glow(cx, cy, radius, layers)
+                local list = {}
+                for i = 1, layers do
+                    local r = radius * (1 - (i - 1) / layers)
+                    local f = Make("Frame", {
+                        Parent = field, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(cx, cy),
+                        Size = UDim2.fromOffset(r * 2, r * 2), BackgroundTransparency = 0.98, BorderSizePixel = 0,
+                    })
+                    Round(f)
+                    list[i] = f
+                end
+                return list
+            end
+            local glowA = Glow(0.95, 0.04, 280, 12)
+            local glowB = Glow(0.30, 1.05, 320, 12)
+            self:_bind(function(t)
+                for _, f in ipairs(glowA) do f.BackgroundColor3 = t.AccentLight end
+                for _, f in ipairs(glowB) do f.BackgroundColor3 = t.Accent end
+            end)
+        end
+
         local stars = {}
-        for i = 1, (opts.StarCount or 60) do
-            local px = rng:NextInteger(1, 2)
+        for i = 1, (opts.StarCount or 80) do
+            local px = (i % 9 == 0) and 3 or rng:NextInteger(1, 2)
             local s = Make("Frame", {
                 Parent = field, BorderSizePixel = 0, Size = UDim2.fromOffset(px, px),
                 Position = UDim2.fromScale(rng:NextNumber(), rng:NextNumber()), BackgroundTransparency = 0.6,
-                BackgroundColor3 = (i % 6 == 0) and Color3.fromRGB(150, 225, 255) or Color3.new(1, 1, 1),
+                BackgroundColor3 = (i % 5 == 0) and Color3.fromRGB(150, 225, 255) or Color3.new(1, 1, 1),
             })
-            if px == 2 then Round(s) end
+            if px > 1 then Round(s) end
             stars[i] = { inst = s, base = rng:NextNumber(0.35, 0.85), speed = rng:NextNumber(0.6, 2.2), phase = rng:NextNumber(0, 6.28) }
         end
-        local t, acc = 0, 0
+
+        local function Shoot()
+            local w, h = self.Main.Size.X.Offset, self.Main.Size.Y.Offset
+            local ang = math.rad(28)
+            local dist = rng:NextInteger(220, 320)
+            local sx, sy = rng:NextNumber(0.25, 0.95) * w, rng:NextNumber(0, 0.4) * h
+            local streak = Make("Frame", {
+                Parent = field, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(sx, sy),
+                Size = UDim2.fromOffset(rng:NextInteger(70, 130), 2), Rotation = 28, BorderSizePixel = 0,
+                BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.05,
+            })
+            Round(streak)
+            Make("UIGradient", { Parent = streak, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) }) })
+            Tween(streak, { Position = UDim2.fromOffset(sx + math.cos(ang) * dist, sy + math.sin(ang) * dist), BackgroundTransparency = 1 }, 0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+            task.delay(1, function() streak:Destroy() end)
+        end
+
+        local t, acc, nextShot = 0, 0, 4
         self:_connect(RunService.Heartbeat, function(dt)
             acc = acc + dt
             if acc < 0.06 or not self.Visible then return end
-            t, acc = t + acc, 0
+            local step = acc
+            t, acc = t + step, 0
             for _, st in ipairs(stars) do
                 st.inst.BackgroundTransparency = math.clamp(st.base + math.sin(t * st.speed + st.phase) * 0.3, 0.05, 0.95)
+            end
+            nextShot = nextShot - step
+            if nextShot <= 0 then
+                nextShot = rng:NextNumber(5, 11)
+                Shoot()
             end
         end)
     end
@@ -416,14 +464,22 @@ function Library:CreateWindow(opts)
     -- ── Sidebar ──
     self.Sidebar = Make("Frame", { Parent = self.Main, Size = UDim2.new(0, 190, 1, 0), BackgroundTransparency = 0.2, BorderSizePixel = 0 })
     self:_bind(function(t) self.Sidebar.BackgroundColor3 = t.SidebarBg end)
+    Make("UIGradient", { Parent = self.Sidebar, Rotation = 90, Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(175, 185, 225)) }) })
+    local edge = Make("Frame", { Parent = self.Sidebar, Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(1, -1, 0, 0), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 })
+    Make("UIGradient", { Parent = edge, Rotation = 90, Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.55), NumberSequenceKeypoint.new(0.7, 0.55), NumberSequenceKeypoint.new(1, 1) }) })
+    self:_bind(function(t) edge.BackgroundColor3 = t.Accent end)
 
     local logoArea = Make("Frame", { Parent = self.Sidebar, Size = UDim2.new(1, 0, 0, opts.Subtitle and 62 or 50), BackgroundTransparency = 1, Active = true })
     local logo = Make("TextLabel", {
         Parent = logoArea, Size = UDim2.new(1, 0, 0, 50), BackgroundTransparency = 1, Text = self.Title,
-        TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBlack, TextSize = 26,
+        TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBlack, TextSize = 30,
         TextTruncate = Enum.TextTruncate.AtEnd,
     })
     self:_breathe(Make("UIGradient", { Parent = logo, Rotation = 0 }))
+    local logoGlow = Make("UIStroke", { Parent = logo, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Thickness = 1.5, Transparency = 0.72 })
+    self:_bind(function(t) logoGlow.Color = t.AccentLight end)
     if opts.Subtitle then
         Make("TextLabel", {
             Parent = logoArea, Size = UDim2.new(1, 0, 0, 14), Position = UDim2.new(0, 0, 0, 44), BackgroundTransparency = 1,
@@ -434,6 +490,10 @@ function Library:CreateWindow(opts)
     local divGrad = Make("UIGradient", { Parent = logoLine, Rotation = 0, Transparency = NumberSequence.new({
         NumberSequenceKeypoint.new(0, 0.7), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 0.7) }) })
     self:_breathe(divGrad)
+    local diamondGlow = Make("Frame", { Parent = logoArea, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 1, -1), Size = UDim2.fromOffset(16, 16), Rotation = 45, BackgroundTransparency = 0.82, BorderSizePixel = 0 })
+    Corner(diamondGlow, 3)
+    Make("Frame", { Parent = logoArea, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 1, -1), Size = UDim2.fromOffset(7, 7), Rotation = 45, BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 })
+    self:_bind(function(t) diamondGlow.BackgroundColor3 = t.AccentLight end)
 
     local searchY = logoArea.Size.Y.Offset + 10
     local searchBg = Make("Frame", { Parent = self.Sidebar, Size = UDim2.new(1, -20, 0, 30), Position = UDim2.new(0, 10, 0, searchY), BackgroundTransparency = 0.5 })
@@ -481,12 +541,16 @@ function Library:CreateWindow(opts)
 
     -- ── Content area ──
     self.Content = Make("Frame", { Parent = self.Main, Size = UDim2.new(1, -190, 1, 0), Position = UDim2.new(0, 190, 0, 0), BackgroundTransparency = 1 })
-    local topStrip = Make("Frame", { Parent = self.Content, Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, Active = true })
+    local topStrip = Make("Frame", { Parent = self.Content, Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, Active = true })
     self._hint = Make("TextLabel", {
         Parent = topStrip, Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1,
         TextColor3 = self.Theme.TextDim, Font = Enum.Font.Montserrat, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Right,
     })
-    self._pages = Make("Frame", { Parent = self.Content, Size = UDim2.new(1, 0, 1, -30), Position = UDim2.new(0, 0, 0, 30), BackgroundTransparency = 1 })
+    self._pageTitle = Make("TextLabel", {
+        Parent = topStrip, Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.new(0, 26, 0, 0), BackgroundTransparency = 1,
+        Text = "", TextColor3 = self.Theme.TextWhite, Font = Enum.Font.GothamBlack, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left,
+    })
+    self._pages = Make("Frame", { Parent = self.Content, Size = UDim2.new(1, 0, 1, -40), Position = UDim2.new(0, 0, 0, 40), BackgroundTransparency = 1 })
 
     self:_drag(logoArea, self.Main)
     self:_drag(topStrip, self.Main)
@@ -577,7 +641,7 @@ function Library:CreateWindow(opts)
     self:_updateHint()
 
     if opts.UnloadButton ~= false then
-        self:AddQuickAction("✦ Unload GUI", function() self:Destroy() end, BASE.Danger)
+        self:AddQuickAction("Unload GUI", function() self:Destroy() end, BASE.Danger)
     end
 
     if not opts.StartHidden then self:Toggle(true) end
@@ -828,41 +892,50 @@ function Window:SelectTab(tab)
     for _, t in ipairs(self._tabs) do
         if t == tab then
             Tween(t._fg, { TextColor3 = self.Theme.TextWhite }, 0.2)
-            Tween(t._txtStroke, { Transparency = 0 }, 0.2)
+            Tween(t._txtStroke, { Transparency = 0.3 }, 0.2)
             t._indicator.Visible = true
+            t._pill.Visible = true
+            t._pill.BackgroundTransparency = 1
+            Tween(t._pill, { BackgroundTransparency = 0.86 }, 0.3)
             t.Page.Visible = true
             t._pageScale.Scale = 0.96
             Tween(t._pageScale, { Scale = 1 }, 0.4, Enum.EasingStyle.Quint)
         else
             Tween(t._fg, { TextColor3 = self.Theme.TextDim }, 0.2)
-            Tween(t._txtStroke, { Transparency = 0.6 }, 0.2)
+            Tween(t._txtStroke, { Transparency = 0.75 }, 0.2)
             t._indicator.Visible = false
+            t._pill.Visible = false
             t.Page.Visible = false
         end
     end
     self.CurrentTab = tab
+    if self._pageTitle then self._pageTitle.Text = tab.Name:upper() end
 end
 
 --- opts: { Icon = "🏠", Default = true }
 function Window:CreateTab(name, opts)
     opts = opts or {}
     local tab = setmetatable({ Window = self, Name = name }, Tab)
-    local label = "    " .. (opts.Icon and (opts.Icon .. "  ") or "") .. name
+    local label = "      " .. (opts.Icon and (opts.Icon .. "  ") or "") .. name
     local isDefault = opts.Default or (#self._tabs == 0)
 
     local btn = Make("TextButton", { Parent = self._tabList, Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 1, Text = "", AutoButtonColor = false })
+    local pill = Make("Frame", { Parent = btn, Size = UDim2.new(1, -20, 1, 0), Position = UDim2.new(0, 10, 0, 0), BackgroundTransparency = 0.86, BorderSizePixel = 0, Visible = false })
+    Corner(pill, 8)
+    self:_stroke(pill, 1, 0.55)
+    self:_bind(function(t) pill.BackgroundColor3 = t.Accent end)
     local bgText = Make("TextLabel", {
         Parent = btn, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = label, TextColor3 = Color3.new(1, 1, 1),
         Font = Enum.Font.Montserrat, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 1,
     })
-    local txtStroke = Make("UIStroke", { Parent = bgText, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Color = Color3.new(1, 1, 1), Thickness = 1.5, Transparency = 0.6 })
+    local txtStroke = Make("UIStroke", { Parent = bgText, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Color = Color3.new(1, 1, 1), Thickness = 1, Transparency = 0.75 })
     self:_breathe(Make("UIGradient", { Parent = txtStroke, Rotation = 0 }))
     local fgText = Make("TextLabel", {
         Parent = btn, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = label, TextColor3 = self.Theme.TextDim,
         Font = Enum.Font.Montserrat, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 2,
     })
     local btnScale = Make("UIScale", { Parent = btn, Scale = 1 })
-    local indicator = Make("Frame", { Parent = btn, Size = UDim2.new(0, 4, 0, 20), Position = UDim2.new(0, -5, 0.5, -10), BorderSizePixel = 0, Visible = false })
+    local indicator = Make("Frame", { Parent = btn, Size = UDim2.new(0, 3, 0, 18), Position = UDim2.new(0, 13, 0.5, -9), BorderSizePixel = 0, Visible = false })
     Round(indicator)
     self:_bind(function(t) indicator.BackgroundColor3 = t.Accent end)
 
@@ -876,13 +949,14 @@ function Window:CreateTab(name, opts)
     Make("UIListLayout", { Parent = page, Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder })
 
     tab.Page, tab._btn, tab._fg, tab._txtStroke, tab._indicator, tab._pageScale = page, btn, fgText, txtStroke, indicator, pageScale
+    tab._pill = pill
     table.insert(self._tabs, tab)
 
     btn.MouseEnter:Connect(function()
         self:_play("Hover")
         if not indicator.Visible then
             Tween(fgText, { TextColor3 = self.Theme.TextWhite }, 0.15)
-            Tween(txtStroke, { Transparency = 0.2 }, 0.15)
+            Tween(txtStroke, { Transparency = 0.45 }, 0.15)
         end
         Tween(btnScale, { Scale = 1.05 }, 0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
         Tween(bgText, { Position = UDim2.new(0, 8, 0, 0) }, 0.25, Enum.EasingStyle.Quint)
@@ -891,7 +965,7 @@ function Window:CreateTab(name, opts)
     btn.MouseLeave:Connect(function()
         if not indicator.Visible then
             Tween(fgText, { TextColor3 = self.Theme.TextDim }, 0.15)
-            Tween(txtStroke, { Transparency = 0.6 }, 0.15)
+            Tween(txtStroke, { Transparency = 0.75 }, 0.15)
         end
         Tween(btnScale, { Scale = 1 }, 0.2)
         Tween(bgText, { Position = UDim2.new() }, 0.25, Enum.EasingStyle.Quint)
@@ -921,8 +995,12 @@ function Tab:CreateSection(title, expanded)
     win:_bind(function(t) header.BackgroundColor3 = t.ToggleOff end)
     Corner(header, 6)
     win:_stroke(header, 1, 0.5)
+    Make("UIGradient", { Parent = header, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 0.6) }) })
+    local bar = Make("Frame", { Parent = header, Size = UDim2.fromOffset(3, 16), Position = UDim2.new(0, 0, 0.5, -8), BorderSizePixel = 0 })
+    Round(bar)
+    win:_bind(function(t) bar.BackgroundColor3 = t.AccentLight end)
     Make("TextLabel", {
-        Parent = header, Size = UDim2.new(1, -30, 1, 0), Position = UDim2.new(0, 10, 0, 0), BackgroundTransparency = 1,
+        Parent = header, Size = UDim2.new(1, -30, 1, 0), Position = UDim2.new(0, 14, 0, 0), BackgroundTransparency = 1,
         Text = title, TextColor3 = win.Theme.TextWhite, Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left,
     })
     local arrow = Make("TextLabel", {
@@ -1007,6 +1085,7 @@ function Section:AddButton(name, callback)
     })
     win:_bind(function(t) btn.BackgroundColor3 = t.ToggleOff end)
     Corner(btn, 8)
+    Make("UIGradient", { Parent = btn, Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(190, 200, 235)) })
     win:_stroke(btn, 1, 0.2)
     local scale = win:_fx(btn, { Grow = 1.04 })
     btn.MouseButton1Down:Connect(function() Tween(scale, { Scale = 0.94 }, 0.1) end)
@@ -1159,7 +1238,9 @@ function Section:AddSlider(name, o)
     win:_stroke(track, 1, 0.2)
     local fill = Make("Frame", { Parent = track, Size = UDim2.new(0, 0, 1, 0), BorderSizePixel = 0 })
     Round(fill)
-    win:_bind(function(t) fill.BackgroundColor3 = t.Accent end)
+    fill.BackgroundColor3 = Color3.new(1, 1, 1)
+    local fillGrad = Make("UIGradient", { Parent = fill })
+    win:_bind(function(t) fillGrad.Color = ColorSequence.new(t.Accent, t.AccentLight) end)
     local knob = Make("Frame", { Parent = track, Size = UDim2.fromOffset(12, 12), BackgroundColor3 = Color3.new(1, 1, 1), Position = UDim2.new(0, -6, 0.5, -6) })
     Round(knob)
 

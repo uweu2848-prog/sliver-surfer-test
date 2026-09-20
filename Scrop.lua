@@ -73,9 +73,10 @@ end
 
 do
     local sec = Home:CreateSection("Cosmic Core", true)
+    -- Toggles show a [ None ] key box by default; add  Bindable = false  to hide it (Feature 1 keeps it as the example)
     sec:AddToggle("Placeholder Feature 1", { Flag = "core_1", Callback = stub("Placeholder Feature 1") })   -- TODO
-    sec:AddToggle("Placeholder Feature 2", { Flag = "core_2", Callback = stub("Placeholder Feature 2") })   -- TODO
-    sec:AddToggle("Placeholder Feature 3", { Flag = "core_3", Callback = stub("Placeholder Feature 3") })   -- TODO
+    sec:AddToggle("Placeholder Feature 2", { Bindable = false, Flag = "core_2", Callback = stub("Placeholder Feature 2") })   -- TODO
+    sec:AddToggle("Placeholder Feature 3", { Bindable = false, Flag = "core_3", Callback = stub("Placeholder Feature 3") })   -- TODO
     sec:AddSlider("Power Level", {
         Min = 0, Max = 100, Default = 50, Increment = 1, Suffix = "%",
         Flag = "core_power", Callback = stub("Power Level"),                                                -- TODO
@@ -93,15 +94,15 @@ local Player = Window:CreateTab("Player", { Icon = "🌠" })
 
 do
     local sec = Player:CreateSection("Movement", true)
-    sec:AddToggle("Movement Toggle 1", { Flag = "move_1", Callback = stub("Movement Toggle 1") })           -- TODO
-    sec:AddToggle("Movement Toggle 2", { Flag = "move_2", Callback = stub("Movement Toggle 2") })           -- TODO
+    sec:AddToggle("Movement Toggle 1", { Bindable = false, Flag = "move_1", Callback = stub("Movement Toggle 1") })           -- TODO
+    sec:AddToggle("Movement Toggle 2", { Bindable = false, Flag = "move_2", Callback = stub("Movement Toggle 2") })           -- TODO
     sec:AddSlider("Value Slider 1", { Min = 0, Max = 100, Default = 16, Flag = "move_v1", Callback = stub("Value Slider 1") })  -- TODO
     sec:AddSlider("Value Slider 2", { Min = 0, Max = 200, Default = 50, Flag = "move_v2", Callback = stub("Value Slider 2") })  -- TODO
 end
 
 do
     local sec = Player:CreateSection("Character", false)
-    sec:AddToggle("Character Toggle", { Flag = "char_1", Callback = stub("Character Toggle") })             -- TODO
+    sec:AddToggle("Character Toggle", { Bindable = false, Flag = "char_1", Callback = stub("Character Toggle") })             -- TODO
     sec:AddButton("Character Button", stub("Character Button"))                                             -- TODO
     sec:AddKeybind("Character Keybind", { Default = Enum.KeyCode.F, Flag = "char_key", Callback = stub("Character Keybind") })  -- TODO
 end
@@ -113,7 +114,7 @@ local Visuals = Window:CreateTab("Visuals", { Icon = "☄️" })
 
 do
     local sec = Visuals:CreateSection("Glow", true)
-    sec:AddToggle("Enable Glow", { Flag = "vis_glow", Callback = stub("Enable Glow") })                     -- TODO
+    sec:AddToggle("Enable Glow", { Bindable = false, Flag = "vis_glow", Callback = stub("Enable Glow") })                     -- TODO
     sec:AddColorPicker("Glow Color", {
         Default = Color3.fromRGB(90, 210, 255), Flag = "vis_glow_color", Callback = stub("Glow Color"),     -- TODO
     })
@@ -122,8 +123,8 @@ end
 
 do
     local sec = Visuals:CreateSection("Overlay", false)
-    sec:AddToggle("Overlay Toggle 1", { Flag = "vis_o1", Callback = stub("Overlay Toggle 1") })             -- TODO
-    sec:AddToggle("Overlay Toggle 2", { Flag = "vis_o2", Callback = stub("Overlay Toggle 2") })             -- TODO
+    sec:AddToggle("Overlay Toggle 1", { Bindable = false, Flag = "vis_o1", Callback = stub("Overlay Toggle 1") })             -- TODO
+    sec:AddToggle("Overlay Toggle 2", { Bindable = false, Flag = "vis_o2", Callback = stub("Overlay Toggle 2") })             -- TODO
     sec:AddDropdown("Style:", { Options = { "Style 1", "Style 2", "Style 3" }, Default = "Style 1", Flag = "vis_style", Callback = stub("Style") })  -- TODO
 end
 
